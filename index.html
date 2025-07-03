@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Website Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS */
+        .ocean-bg {
+            background-image: url('https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/3aaf44da-486a-4d45-9cb0-c766bb852766.png');
+            background-size: cover;
+            background-position: center;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .transaction-tablet {
+            background: rgba(255,255,255,0.9);
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0,119,182,0.3);
+        }
+        .admin-panel {
+            background: rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body class="min-h-screen ocean-bg" alt="Background panoramic view of turquoise ocean with white sandy beach and palm trees under clear blue sky">
+    <div id="app" class="container mx-auto px-4 py-8">
+        <!-- Auth Section -->
+        <div id="auth-section" class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl mb-8" v-if="!isLoggedIn">
+            <div class="p-8">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">{{ isLoginView ? 'Masuk' : 'Daftar' }}</h2>
+                </div>
+                
+                <form @submit.prevent="isLoginView ? handleLogin() : handleRegister()">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="email">Email</label>
+                        <input v-model="auth.email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" type="email" required>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="password">Password</label>
+                        <input v-model="auth.password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="password" type="password" required>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                            {{ isLoginView ? 'Login' : 'Register' }}
+                        </button>
+                        <a @click="toggleAuthView" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800 cursor-pointer">
+                            {{ isLoginView ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk' }}
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div v-if="isLoggedIn">
+            <!-- Header -->
+            <header class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold text-white">Script Website Store</h1>
+                <button @click="handleLogout" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                    Logout
+                </button>
+            </header>
+
+            <!-- Admin Panel -->
+            <div v-if="currentUser.isAdmin" class="admin-panel p-6 rounded-lg mb-8">
+                <h2 class="text-xl font-bold text-white mb-4">Admin Dashboard</h2>
+                
+                <!-- Add Product Form -->
+                <div class="bg-gray-100 p-4 rounded-lg mb-6">
+                    <h3 class="font-bold mb-2">{{ editingProduct ? 'Edit Produk' : 'Tambah Produk Baru' }}</h3>
+                    <form @submit.prevent="editingProduct ? updateProduct() : addProduct()">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-1">Product Name</label>
+                                <input v-model="productForm.name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="text" required>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-1">Price (IDR)</label>
+                                <input v-model="productForm.price" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="number" required>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-gray-700 text-sm font-bold mb-1">Description</label>
+                                <textarea v-model="productForm.description" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="3" required></textarea>
+                            </div>
+                        </div>
+                        <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mr-2">
+                            {{ editingProduct ? 'Update' : 'Add' }}
+                        </button>
+                        <button v-if="editingProduct" @click="cancelEdit" type="button" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                            Cancel
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Products List -->
+                <div class="bg-white p-4 rounded-lg">
+                    <h3 class="font-bold mb-4">Product List</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white">
+                            <thead>
+                                <tr>
+                                    <th class="py-2 px-4 border-b">Nama</th>
+                                    <th class="py-2 px-4 border-b">Harga</th>
+                                    <th class="py-2 px-4 border-b">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(product, index) in products" :key="index">
+                                    <td class="py-2 px-4 border-b">{{ product.name }}</td>
+                                    <td class="py-2 px-4 border-b">IDR {{ product.price.toLocaleString() }}</td>
+                                    <td class="py-2 px-4 border-b">
+                                        <button @click="editProduct(index)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm mr-1">
+                                            Edit
+                                        </button>
+                                        <button @click="deleteProduct(index)" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer View -->
+            <div v-else>
+                <!-- Products Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div v-for="(product, index) in products" :key="index" class="product-card bg-white rounded-lg overflow-hidden shadow-lg transition duration-300">
+                        <div class="p-6">
+                            <h3 class="font-bold text-xl mb-2">{{ product.name }}</h3>
+                            <p class="text-gray-700 mb-4">{{ product.description }}</p>
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-lg">IDR {{ product.price.toLocaleString() }}</span>
+                                <button @click="showTransactionModal(index)" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                    Order Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Section -->
+                <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                    <h2 class="text-2xl font-bold mb-4">Hubungi Kami</h2>
+                    <p class="mb-4">Ada pertanyaan? Hubungi kami via WhatsApp untuk bantuan cepat.</p>
+                    <a :href="'https://wa.me/6285717149980?text=' + encodeURIComponent('Hello, I have questions about your script products')" 
+                       class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded inline-flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.956.002-5.4 4.4-9.797 9.8-9.8 2.603-.002 5.062 1.016 6.894 2.862 1.832 1.846 2.85 4.3 2.85 6.897.002 5.4-4.395 9.796-9.795 9.8h-.008c-2.088-.001-4.083-.542-5.878-1.588l-6.173 1.688zm9.8-15c-4.294.002-7.797 3.504-7.8 7.797 0 1.948.712 3.797 2.006 5.219l-1.319 4.819 4.813-1.318c1.431 1.294 3.276 2.006 5.221 2.006 4.293 0 7.796-3.502 7.8-7.796.001-2.093-.813-4.055-2.299-5.539-1.486-1.484-3.445-2.294-5.538-2.293l-.004.002zm5.507 8.194c-.209.465-.752.763-1.351.763h-.001c-.337 0-.672-.102-.966-.309l-1.081-.788-2.072 1.019-.197-.156c-.394-.312-.646-.712-.717-1.148-.071-.434.042-.887.312-1.242l3.981-5.187c.272-.337.675-.479 1.082-.371.407.107.714.418.833.825l.518 2.062 1.044.764c.336.245.51.593.481.949-.031.355-.253.684-.588.869l-.007.005z"/>
+                        </svg>
+                        Chat on WhatsApp
+                    </a>
+                </div>
+
+                <!-- How to Order Section -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-2xl font-bold mb-4">Cara Memesan</h2>
+                    <ol class="list-decimal pl-5 space-y-2">
+                        <li>Pilih script yang ingin dibeli</li>
+                        <li>Klik tombol "Pesan Sekarang"</li>
+                        <li>Isi form transaksi</li>
+                        <li>Anda akan diarahkan ke WhatsApp untuk konfirmasi pembayaran</li>
+                        <li>Setelah pembayaran dikonfirmasi, file script akan dikirimkan</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Modal -->
+        <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="transaction-tablet p-6 w-full max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Selesaikan Pesanan Anda</h3>
+                    <button @click="closeModal" class="text-gray-500 hover:text-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="font-semibold">{{ selectedProduct.name }}</p>
+                    <p class="text-gray-600">{{ selectedProduct.description }}</p>
+                    <p class="text-lg font-bold mt-2">Price: IDR {{ selectedProduct.price.toLocaleString() }}</p>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Email</label>
+                    <input v-model="transaction.email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="email" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">WhatsApp Number</label>
+                    <input v-model="transaction.whatsapp" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="tel" required placeholder="628123456789">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Notes</label>
+                    <textarea v-model="transaction.notes" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="3"></textarea>
+                </div>
+                
+                <button @click="completeOrder" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Selesaikan Pembelian via WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        
+        createApp({
+            setup() {
+                // State Management
+                const isLoggedIn = ref(false);
+                const isLoginView = ref(true);
+                const currentUser = reactive({
+                    email: '',
+                    isAdmin: false
+                });
+                
+                const auth = reactive({
+                    email: '',
+                    password: ''
+                });
+                
+                // Product Management
+                const products = ref([
+                    { 
+                        name: 'Script website sosmed', 
+                        price: 15000, 
+                        description: 'cocok buat yang mau jualan suntik sosmed.'
+                    },
+                    { 
+                        name: 'script website hosting', 
+                        price: 35000, 
+                        description: 'script website hosting dan host wa dengan sistem pembelian otomatis dan pembayaran manual ke admin.'
+                    },
+                    { 
+                        name: 'script website topup game', 
+                        price: 500000, 
+                        description: 'script topup game menggunakan sistem otomatis pembelian dan bisa bikin code dismon.'
+                    },
+                    { 
+                        name: 'script website list  admin', 
+                        price: 15000, 
+                        description: 'script website list admin dan role nya samp.'
+                    },
+                    { 
+                        name: 'script website developer samp', 
+                        price: 15000, 
+                        description: 'cocok buat yang open jasa developer server samp.'
+                    },
+                    { 
+                        name: 'script website pulsa&paketdata', 
+                        price: 20000, 
+                        description: 'sistem pembelian manual langsung ke whatsapp admin.'
+                    },
+                    { 
+                        name: 'script website donate samp', 
+                        price: 15000, 
+                        description: 'cocok buat yang ingin menggunakan website buat donasi server samp.'
+                    },
+                    { 
+                        name: 'script website suntik sosmed', 
+                        price: 15000, 
+                        description: 'website buat beli suntik sosmed menggunakan website sistem konfirmasi ke admin.'
+                    },
+                    { 
+                        name: 'script website saran server', 
+                        price: 15000, 
+                        description: 'script website buat saran update server atau saran event.'
+                    },
+                    { 
+                        name: 'script website laporan admin', 
+                        price: 15000, 
+                        description: 'script website laporan buat admin - player - atau melaporkan bug .'
+                    }
+                ]);
+                
+                const productForm = reactive({
+                    name: '',
+                    price: 0,
+                    description: ''
+                });
+                
+                const editingProduct = ref(false);
+                const editIndex = ref(0);
+
+                // Transactions
+                const showModal = ref(false);
+                const selectedProduct = ref({});
+                const transaction = reactive({
+                    email: '',
+                    whatsapp: '',
+                    notes: ''
+                });
+
+                // Methods
+                const toggleAuthView = () => {
+                    isLoginView.value = !isLoginView.value;
+                };
+                
+                const handleRegister = () => {
+                    currentUser.email = auth.email;
+                    currentUser.isAdmin = auth.email === 'admin@example.com';
+                    isLoggedIn.value = true;
+                    alert('Registrasi berhasil!');
+                };
+                
+                const handleLogin = () => {
+                    // Demo user (in a real app, this would be server-side authentication)
+                    if (auth.password === 'opung555') {
+                        currentUser.email = auth.email;
+                        currentUser.isAdmin = auth.email === 'admin@example.com';
+                        isLoggedIn.value = true;
+                        alert('Login berhasil!');
+                    } else {
+                        alert('Email atau password salah');
+                    }
+                };
+                
+                const handleLogout = () => {
+                    currentUser.email = '';
+                    currentUser.isAdmin = false;
+                    isLoggedIn.value = false;
+                };
+                
+                const addProduct = () => {
+                    products.value.push({
+                        name: productForm.name,
+                        price: Number(productForm.price),
+                        description: productForm.description
+                    });
+                    
+                    resetProductForm();
+                };
+                
+                const editProduct = (index) => {
+                    productForm.name = products.value[index].name;
+                    productForm.price = products.value[index].price;
+                    productForm.description = products.value[index].description;
+                    
+                    editingProduct.value = true;
+                    editIndex.value = index;
+                };
+                
+                const updateProduct = () => {
+                    products.value[editIndex.value] = {
+                        name: productForm.name,
+                        price: Number(productForm.price),
+                        description: productForm.description
+                    };
+                    
+                    cancelEdit();
+                };
+                
+                const cancelEdit = () => {
+                    resetProductForm();
+                    editingProduct.value = false;
+                };
+                
+                const deleteProduct = (index) => {
+                    if (confirm('Are you sure you want to delete this product?')) {
+                        products.value.splice(index, 1);
+                    }
+                };
+                
+                const resetProductForm = () => {
+                    productForm.name = '';
+                    productForm.price = 0;
+                    productForm.description = '';
+                };
+                
+                // Transaction Methods
+                const showTransactionModal = (productIndex) => {
+                    selectedProduct.value = products.value[productIndex];
+                    transaction.email = currentUser.email;
+                    showModal.value = true;
+                };
+                
+                const closeModal = () => {
+                    showModal.value = false;
+                };
+                
+                const completeOrder = () => {
+                    if (transaction.email && transaction.whatsapp) {
+                        // Format WhatsApp message
+                        const message = `Saya ingin membeli:\n\nProduct: ${selectedProduct.value.name}\nPrice: IDR ${selectedProduct.value.price.toLocaleString()}\n\nMy details:\nEmail: ${transaction.email}\nWhatsApp: ${transaction.whatsapp}\nNotes: ${transaction.notes || 'None'}`;
+                        
+                        // Redirect to WhatsApp
+                        window.location.href = `https://wa.me/6285717149980?text=${encodeURIComponent(message)}`;
+                    } else {
+                        alert('Please fill in all required fields');
+                    }
+                };
+
+                return {
+                    isLoggedIn,
+                    isLoginView,
+                    currentUser,
+                    auth,
+                    products,
+                    productForm,
+                    editingProduct,
+                    showModal,
+                    selectedProduct,
+                    transaction,
+                    
+                    toggleAuthView,
+                    handleRegister,
+                    handleLogin,
+                    handleLogout,
+                    addProduct,
+                    editProduct,
+                    updateProduct,
+                    cancelEdit,
+                    deleteProduct,
+                    showTransactionModal,
+                    closeModal,
+                    completeOrder
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

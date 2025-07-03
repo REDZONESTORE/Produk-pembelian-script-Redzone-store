@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Website Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS */
+        .ocean-bg {
+            background-image: url('https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/3aaf44da-486a-4d45-9cb0-c766bb852766.png');
+            background-size: cover;
+            background-position: center;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .transaction-tablet {
+            background: rgba(255,255,255,0.9);
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0,119,182,0.3);
+        }
+        .admin-panel {
+            background: rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
